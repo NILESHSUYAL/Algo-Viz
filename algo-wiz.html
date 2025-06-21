@@ -1,0 +1,1700 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlgoOS - Algorithm Visualizer Operating System</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .desktop {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .window {
+            position: absolute;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            min-width: 400px;
+            min-height: 300px;
+            z-index: 10;
+        }
+        
+        .window.active {
+            z-index: 50;
+        }
+        
+        .window-header {
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px 8px 0 0;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .taskbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            height: 60px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 100;
+        }
+        
+        .desktop-icon {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+        
+        .desktop-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .array-bar {
+            display: inline-block;
+            width: 20px;
+            margin: 1px;
+            background: #3b82f6;
+            transition: all 0.3s ease;
+        }
+        
+        .array-bar.comparing {
+            background: #ef4444;
+        }
+        
+        .array-bar.sorted {
+            background: #10b981;
+        }
+        
+        .grid-cell {
+            width: 25px;
+            height: 25px;
+            border: 1px solid #e5e7eb;
+            display: inline-block;
+            transition: background-color 0.2s;
+        }
+        
+        .grid-cell.wall {
+            background: #374151;
+        }
+        
+        .grid-cell.start {
+            background: #10b981;
+        }
+        
+        .grid-cell.end {
+            background: #ef4444;
+        }
+        
+        .grid-cell.visited {
+            background: #fbbf24;
+        }
+        
+        .grid-cell.path {
+            background: #8b5cf6;
+        }
+        
+        .tree-node {
+            background: #3b82f6;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            margin: 4px;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        
+        .tree-node.visiting {
+            background: #ef4444;
+            transform: scale(1.1);
+        }
+        
+        .tree-node.visited {
+            background: #10b981;
+        }
+    </style>
+</head>
+<body>
+    <div class="desktop" id="desktop">
+        <!-- Desktop Icons -->
+        <div class="desktop-icon" style="top: 50px; left: 50px;" onclick="openWindow('sortingApp')">
+            <i class="fas fa-sort text-4xl mb-2"></i>
+            <span class="text-sm">Sorting</span>
+        </div>
+        
+        <div class="desktop-icon" style="top: 50px; left: 150px;" onclick="openWindow('pathfindingApp')">
+            <i class="fas fa-route text-4xl mb-2"></i>
+            <span class="text-sm">Pathfinding</span>
+        </div>
+        
+        <div class="desktop-icon" style="top: 50px; left: 250px;" onclick="openWindow('treeApp')">
+            <i class="fas fa-sitemap text-4xl mb-2"></i>
+            <span class="text-sm">Tree Traversal</span>
+        </div>
+        
+        <div class="desktop-icon" style="top: 50px; left: 350px;" onclick="openWindow('graphApp')">
+            <i class="fas fa-project-diagram text-4xl mb-2"></i>
+            <span class="text-sm">Graph Algorithms</span>
+        </div>
+        
+        <div class="desktop-icon" style="top: 150px; left: 50px;" onclick="openWindow('searchApp')">
+            <i class="fas fa-search text-4xl mb-2"></i>
+            <span class="text-sm">Search</span>
+        </div>
+        
+        <div class="desktop-icon" style="top: 150px; left: 150px;" onclick="openWindow('fileManager')">
+            <i class="fas fa-folder text-4xl mb-2"></i>
+            <span class="text-sm">File Manager</span>
+        </div>
+        
+        <div class="desktop-icon" style="top: 150px; left: 250px;" onclick="openWindow('calculator')">
+            <i class="fas fa-calculator text-4xl mb-2"></i>
+            <span class="text-sm">Calculator</span>
+        </div>
+        
+        <div class="desktop-icon" style="top: 150px; left: 350px;" onclick="openWindow('terminal')">
+            <i class="fas fa-terminal text-4xl mb-2"></i>
+            <span class="text-sm">Terminal</span>
+        </div>
+
+        <!-- Windows -->
+        
+        <!-- Sorting Algorithm Window -->
+        <div id="sortingApp" class="window hidden" style="top: 100px; left: 200px; width: 800px; height: 500px;">
+            <div class="window-header">
+                <span><i class="fas fa-sort mr-2"></i>Sorting Algorithms</span>
+                <div>
+                    <button onclick="minimizeWindow('sortingApp')" class="mr-2 hover:bg-white hover:bg-opacity-20 px-2 py-1 rounded">_</button>
+                    <button onclick="closeWindow('sortingApp')" class="hover:bg-red-500 px-2 py-1 rounded">×</button>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="mb-4 flex gap-4">
+                    <button onclick="generateArray()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Generate Array</button>
+                    <button onclick="bubbleSort()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Bubble Sort</button>
+                    <button onclick="quickSort()" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">Quick Sort</button>
+                    <button onclick="mergeSort()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Merge Sort</button>
+                </div>
+                <div id="arrayContainer" class="border p-4 h-64 flex items-end justify-center bg-gray-50"></div>
+                <div class="mt-4">
+                    <p><strong>Speed:</strong> <input type="range" id="sortSpeed" min="1" max="100" value="50" class="ml-2"></p>
+                    <p class="mt-2"><strong>Algorithm:</strong> <span id="currentAlgo">None</span></p>
+                    <p><strong>Comparisons:</strong> <span id="comparisons">0</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pathfinding Window -->
+        <div id="pathfindingApp" class="window hidden" style="top: 120px; left: 250px; width: 900px; height: 600px;">
+            <div class="window-header">
+                <span><i class="fas fa-route mr-2"></i>Pathfinding Algorithms</span>
+                <div>
+                    <button onclick="minimizeWindow('pathfindingApp')" class="mr-2 hover:bg-white hover:bg-opacity-20 px-2 py-1 rounded">_</button>
+                    <button onclick="closeWindow('pathfindingApp')" class="hover:bg-red-500 px-2 py-1 rounded">×</button>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="mb-4 flex gap-4 flex-wrap">
+                    <button onclick="clearGrid()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Clear Grid</button>
+                    <button onclick="dijkstraSearch()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Dijkstra</button>
+                    <button onclick="aStarSearch()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">A* Search</button>
+                    <button onclick="breadthFirstSearch()" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">BFS</button>
+                    <button onclick="depthFirstSearch()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">DFS</button>
+                </div>
+                <div class="mb-2 text-sm">
+                    <span class="inline-block w-4 h-4 bg-green-500 mr-2"></span>Start
+                    <span class="inline-block w-4 h-4 bg-red-500 mr-2 ml-4"></span>End
+                    <span class="inline-block w-4 h-4 bg-gray-700 mr-2 ml-4"></span>Wall
+                    <span class="inline-block w-4 h-4 bg-yellow-400 mr-2 ml-4"></span>Visited
+                    <span class="inline-block w-4 h-4 bg-purple-500 mr-2 ml-4"></span>Path
+                </div>
+                <div id="pathfindingGrid" class="border inline-block bg-white"></div>
+                <div class="mt-4">
+                    <p><strong>Algorithm:</strong> <span id="pathAlgo">None</span></p>
+                    <p><strong>Nodes Visited:</strong> <span id="nodesVisited">0</span></p>
+                    <p><strong>Path Length:</strong> <span id="pathLength">0</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tree Traversal Window -->
+        <div id="treeApp" class="window hidden" style="top: 140px; left: 300px; width: 700px; height: 500px;">
+            <div class="window-header">
+                <span><i class="fas fa-sitemap mr-2"></i>Tree Traversal</span>
+                <div>
+                    <button onclick="minimizeWindow('treeApp')" class="mr-2 hover:bg-white hover:bg-opacity-20 px-2 py-1 rounded">_</button>
+                    <button onclick="closeWindow('treeApp')" class="hover:bg-red-500 px-2 py-1 rounded">×</button>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="mb-4 flex gap-4">
+                    <button onclick="generateTree()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Generate Tree</button>
+                    <button onclick="preorderTraversal()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Preorder</button>
+                    <button onclick="inorderTraversal()" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">Inorder</button>
+                    <button onclick="postorderTraversal()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Postorder</button>
+                    <button onclick="levelOrderTraversal()" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">Level Order</button>
+                </div>
+                <div id="treeContainer" class="border p-4 h-64 bg-gray-50 overflow-auto"></div>
+                <div class="mt-4">
+                    <p><strong>Traversal Order:</strong> <span id="traversalOrder"></span></p>
+                    <p><strong>Current Node:</strong> <span id="currentNode">None</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graph Algorithms Window -->
+        <div id="graphApp" class="window hidden" style="top: 160px; left: 350px; width: 800px; height: 500px;">
+            <div class="window-header">
+                <span><i class="fas fa-project-diagram mr-2"></i>Graph Algorithms</span>
+                <div>
+                    <button onclick="minimizeWindow('graphApp')" class="mr-2 hover:bg-white hover:bg-opacity-20 px-2 py-1 rounded">_</button>
+                    <button onclick="closeWindow('graphApp')" class="hover:bg-red-500 px-2 py-1 rounded">×</button>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="mb-4 flex gap-4">
+                    <button onclick="generateGraph()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Generate Graph</button>
+                    <button onclick="dfsGraph()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">DFS</button>
+                    <button onclick="bfsGraph()" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">BFS</button>
+                    <button onclick="dijkstraGraph()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Dijkstra</button>
+                </div>
+                <canvas id="graphCanvas" width="750" height="300" class="border bg-white"></canvas>
+                <div class="mt-4">
+                    <p><strong>Algorithm:</strong> <span id="graphAlgo">None</span></p>
+                    <p><strong>Visited Nodes:</strong> <span id="graphVisited"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Algorithms Window -->
+        <div id="searchApp" class="window hidden" style="top: 80px; left: 400px; width: 600px; height: 400px;">
+            <div class="window-header">
+                <span><i class="fas fa-search mr-2"></i>Search Algorithms</span>
+                <div>
+                    <button onclick="minimizeWindow('searchApp')" class="mr-2 hover:bg-white hover:bg-opacity-20 px-2 py-1 rounded">_</button>
+                    <button onclick="closeWindow('searchApp')" class="hover:bg-red-500 px-2 py-1 rounded">×</button>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <input type="number" id="searchTarget" placeholder="Enter target value" class="border px-3 py-2 rounded mr-4">
+                    <button onclick="linearSearch()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mr-2">Linear Search</button>
+                    <button onclick="binarySearch()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Binary Search</button>
+                </div>
+                <div id="searchArray" class="border p-4 h-32 flex items-center justify-center bg-gray-50"></div>
+                <div class="mt-4">
+                    <p><strong>Target:</strong> <span id="searchTargetDisplay">None</span></p>
+                    <p><strong>Steps:</strong> <span id="searchSteps">0</span></p>
+                    <p><strong>Result:</strong> <span id="searchResult">Not found</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Manager Window -->
+        <div id="fileManager" class="window hidden" style="top: 100px; left: 150px; width: 600px; height: 450px;">
+            <div class="window-header">
+                <span><i class="fas fa-folder mr-2"></i>File Manager</span>
+                <div>
+                    <button onclick="minimizeWindow('fileManager')" class="mr-2 hover:bg-white hover:bg-opacity-20 px-2 py-1 rounded">_</button>
+                    <button onclick="closeWindow('fileManager')" class="hover:bg-red-500 px-2 py-1 rounded">×</button>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <span class="text-sm text-gray-600">Path: /home/user/algorithms/</span>
+                </div>
+                <div class="border h-64 bg-white p-4 overflow-auto">
+                    <div class="file-item flex items-center py-2 hover:bg-gray-100 cursor-pointer" onclick="openAlgorithmFile('bubble_sort.js')">
+                        <i class="fas fa-file-code text-blue-500 mr-3"></i>
+                        <span>bubble_sort.js</span>
+                    </div>
+                    <div class="file-item flex items-center py-2 hover:bg-gray-100 cursor-pointer" onclick="openAlgorithmFile('quicksort.js')">
+                        <i class="fas fa-file-code text-blue-500 mr-3"></i>
+                        <span>quicksort.js</span>
+                    </div>
+                    <div class="file-item flex items-center py-2 hover:bg-gray-100 cursor-pointer" onclick="openAlgorithmFile('dijkstra.js')">
+                        <i class="fas fa-file-code text-green-500 mr-3"></i>
+                        <span>dijkstra.js</span>
+                    </div>
+                    <div class="file-item flex items-center py-2 hover:bg-gray-100 cursor-pointer" onclick="openAlgorithmFile('binary_tree.js')">
+                        <i class="fas fa-file-code text-purple-500 mr-3"></i>
+                        <span>binary_tree.js</span>
+                    </div>
+                    <div class="file-item flex items-center py-2 hover:bg-gray-100 cursor-pointer">
+                        <i class="fas fa-folder text-yellow-500 mr-3"></i>
+                        <span>sorting_algorithms/</span>
+                    </div>
+                    <div class="file-item flex items-center py-2 hover:bg-gray-100 cursor-pointer">
+                        <i class="fas fa-folder text-yellow-500 mr-3"></i>
+                        <span>graph_algorithms/</span>
+                    </div>
+                </div>
+                <div class="mt-4 text-sm text-gray-600">
+                    <p>6 items, 2 folders</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calculator Window -->
+        <div id="calculator" class="window hidden" style="top: 180px; left: 450px; width: 300px; height: 400px;">
+            <div class="window-header">
+                <span><i class="fas fa-calculator mr-2"></i>Calculator</span>
+                <div>
+                    <button onclick="minimizeWindow('calculator')" class="mr-2 hover:bg-white hover:bg-opacity-20 px-2 py-1 rounded">_</button>
+                    <button onclick="closeWindow('calculator')" class="hover:bg-red-500 px-2 py-1 rounded">×</button>
+                </div>
+            </div>
+            <div class="p-4">
+                <div class="mb-4">
+                    <input type="text" id="calcDisplay" class="w-full p-3 text-right text-xl border rounded bg-gray-100" readonly>
+                </div>
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="clearCalc()" class="bg-red-500 text-white p-3 rounded hover:bg-red-600 col-span-2">Clear</button>
+                    <button onclick="appendToCalc('/')" class="bg-gray-500 text-white p-3 rounded hover:bg-gray-600">÷</button>
+                    <button onclick="appendToCalc('*')" class="bg-gray-500 text-white p-3 rounded hover:bg-gray-600">×</button>
+                    <button onclick="appendToCalc('7')" class="bg-blue-500 text-white p-3 rounded hover:bg-blue-600">7</button>
+                    <button onclick="appendToCalc('8')" class="bg-blue-500 text-white p-3 rounded hover:bg-blue-600">8</button>
+                    <button onclick="appendToCalc('9')" class="bg-blue-500 text-white p-3 rounded hover:bg-blue-600">9</button>
+                    <button onclick="appendToCalc('-')" class="bg-gray-500 text-white p-3 rounded hover:bg-gray-600">-</button>
+                    <button onclick="appendToCalc('4')" class="bg-blue-500 text-white p-3 rounded hover:bg-blue-600">4</button>
+                    <button onclick="appendToCalc('5')" class="bg-blue-500 text-white p-3 rounded hover:bg-blue-600">5</button>
+                    <button onclick="appendToCalc('6')" class="bg-blue-500 text-white p-3 rounded hover:bg-blue-600">6</button>
+                    <button onclick="appendToCalc('+')" class="bg-gray-500 text-white p-3 rounded hover:bg-gray-600">+</button>
+                    <button onclick="appendToCalc('1')" class="bg-blue-500 text-white p-3 rounded hover:bg-blue-600">1</button>
+                    <button onclick="appendToCalc('2')" class="bg-blue-500 text-white p-3 rounded hover:bg-blue-600">2</button>
+                    <button onclick="appendToCalc('3')" class="bg-blue-500 text-white p-3 rounded hover:bg-blue-600">3</button>
+                    <button onclick="calculateResult()" class="bg-green-500 text-white p-3 rounded hover:bg-green-600 row-span-2">=</button>
+                    <button onclick="appendToCalc('0')" class="bg-blue-500 text-white p-3 rounded hover:bg-blue-600 col-span-2">0</button>
+                    <button onclick="appendToCalc('.')" class="bg-gray-500 text-white p-3 rounded hover:bg-gray-600">.</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terminal Window -->
+        <div id="terminal" class="window hidden" style="top: 120px; left: 500px; width: 700px; height: 400px;">
+            <div class="window-header">
+                <span><i class="fas fa-terminal mr-2"></i>AlgoOS Terminal</span>
+                <div>
+                    <button onclick="minimizeWindow('terminal')" class="mr-2 hover:bg-white hover:bg-opacity-20 px-2 py-1 rounded">_</button>
+                    <button onclick="closeWindow('terminal')" class="hover:bg-red-500 px-2 py-1 rounded">×</button>
+                </div>
+            </div>
+            <div class="p-4 bg-black text-green-400 h-full font-mono text-sm overflow-auto" id="terminalContent">
+                <div>AlgoOS Terminal v1.0</div>
+                <div>Type 'help' for available commands</div>
+                <div class="mt-2">
+                    <span class="text-blue-400">user@algoos:~$ </span>
+                    <input type="text" id="terminalInput" class="bg-transparent border-none outline-none text-green-400 flex-1" onkeypress="handleTerminalInput(event)">
+                </div>
+            </div>
+        </div>
+
+        <!-- Taskbar -->
+        <div class="taskbar">
+            <div class="flex items-center">
+                <button class="text-white hover:bg-gray-700 px-4 py-2 rounded mr-4" onclick="showStartMenu()">
+                    <i class="fas fa-th mr-2"></i>Start
+                </button>
+                <div id="taskbarApps" class="flex gap-2">
+                    <!-- Active applications will appear here -->
+                </div>
+            </div>
+            <div class="ml-auto text-white text-sm" id="clock"></div>
+        </div>
+
+        <!-- Start Menu -->
+        <div id="startMenu" class="hidden fixed bottom-16 left-4 bg-gray-900 text-white rounded-lg shadow-xl p-4 w-64 z-50">
+            <div class="mb-4">
+                <h3 class="text-lg font-semibold">Applications</h3>
+            </div>
+            <div class="space-y-2">
+                <div class="hover:bg-gray-700 p-2 rounded cursor-pointer" onclick="openWindow('sortingApp'); hideStartMenu()">
+                    <i class="fas fa-sort mr-3"></i>Sorting Algorithms
+                </div>
+                <div class="hover:bg-gray-700 p-2 rounded cursor-pointer" onclick="openWindow('pathfindingApp'); hideStartMenu()">
+                    <i class="fas fa-route mr-3"></i>Pathfinding
+                </div>
+                <div class="hover:bg-gray-700 p-2 rounded cursor-pointer" onclick="openWindow('treeApp'); hideStartMenu()">
+                    <i class="fas fa-sitemap mr-3"></i>Tree Traversal
+                </div>
+                <div class="hover:bg-gray-700 p-2 rounded cursor-pointer" onclick="openWindow('graphApp'); hideStartMenu()">
+                    <i class="fas fa-project-diagram mr-3"></i>Graph Algorithms
+                </div>
+                <div class="hover:bg-gray-700 p-2 rounded cursor-pointer" onclick="openWindow('searchApp'); hideStartMenu()">
+                    <i class="fas fa-search mr-3"></i>Search Algorithms
+                </div>
+                <div class="hover:bg-gray-700 p-2 rounded cursor-pointer" onclick="openWindow('fileManager'); hideStartMenu()">
+                    <i class="fas fa-folder mr-3"></i>File Manager
+                </div>
+                <div class="hover:bg-gray-700 p-2 rounded cursor-pointer" onclick="openWindow('calculator'); hideStartMenu()">
+                    <i class="fas fa-calculator mr-3"></i>Calculator
+                </div>
+                <div class="hover:bg-gray-700 p-2 rounded cursor-pointer" onclick="openWindow('terminal'); hideStartMenu()">
+                    <i class="fas fa-terminal mr-3"></i>Terminal
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let activeWindows = new Set();
+        let windowZIndex = 10;
+        let isDragging = false;
+        let dragElement = null;
+        let dragOffset = { x: 0, y: 0 };
+        let sortingArray = [];
+        let isAnimating = false;
+        let pathfindingGrid = [];
+        let treeNodes = [];
+        let graphNodes = [];
+        let graphEdges = [];
+
+        // Initialize the OS
+        function initializeOS() {
+            updateClock();
+            setInterval(updateClock, 1000);
+            generateArray();
+            initializePathfindingGrid();
+            generateTree();
+            generateGraph();
+            generateSearchArray();
+            
+            // Click outside to close start menu
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('#startMenu') && !e.target.closest('button[onclick="showStartMenu()"]')) {
+                    hideStartMenu();
+                }
+            });
+        }
+
+        // Clock functionality
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dateString = now.toLocaleDateString();
+            document.getElementById('clock').textContent = `${timeString} ${dateString}`;
+        }
+
+        // Window management
+        function openWindow(windowId) {
+            const window = document.getElementById(windowId);
+            window.classList.remove('hidden');
+            window.classList.add('active');
+            window.style.zIndex = ++windowZIndex;
+            activeWindows.add(windowId);
+            updateTaskbar();
+            
+            // Remove active class from other windows
+            document.querySelectorAll('.window').forEach(w => {
+                if (w.id !== windowId) {
+                    w.classList.remove('active');
+                }
+            });
+        }
+
+        function closeWindow(windowId) {
+            const window = document.getElementById(windowId);
+            window.classList.add('hidden');
+            window.classList.remove('active');
+            activeWindows.delete(windowId);
+            updateTaskbar();
+        }
+
+        function minimizeWindow(windowId) {
+            const window = document.getElementById(windowId);
+            window.style.display = 'none';
+            window.classList.remove('active');
+        }
+
+        function updateTaskbar() {
+            const taskbarApps = document.getElementById('taskbarApps');
+            taskbarApps.innerHTML = '';
+            
+            activeWindows.forEach(windowId => {
+                const window = document.getElementById(windowId);
+                if (!window.classList.contains('hidden')) {
+                    const button = document.createElement('button');
+                    button.className = 'text-white bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-sm';
+                    button.textContent = window.querySelector('.window-header span').textContent;
+                    button.onclick = () => {
+                        if (window.style.display === 'none') {
+                            window.style.display = 'block';
+                            window.classList.add('active');
+                            window.style.zIndex = ++windowZIndex;
+                        } else {
+                            openWindow(windowId);
+                        }
+                    };
+                    taskbarApps.appendChild(button);
+                }
+            });
+        }
+
+        // Start menu
+        function showStartMenu() {
+            document.getElementById('startMenu').classList.toggle('hidden');
+        }
+
+        function hideStartMenu() {
+            document.getElementById('startMenu').classList.add('hidden');
+        }
+
+        // Drag functionality
+        document.addEventListener('mousedown', function(e) {
+            if (e.target.closest('.window-header')) {
+                isDragging = true;
+                dragElement = e.target.closest('.window');
+                const rect = dragElement.getBoundingClientRect();
+                dragOffset.x = e.clientX - rect.left;
+                dragOffset.y = e.clientY - rect.top;
+                
+                // Bring window to front
+                dragElement.style.zIndex = ++windowZIndex;
+                document.querySelectorAll('.window').forEach(w => w.classList.remove('active'));
+                dragElement.classList.add('active');
+            }
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (isDragging && dragElement) {
+                const x = e.clientX - dragOffset.x;
+                const y = e.clientY - dragOffset.y;
+                dragElement.style.left = Math.max(0, Math.min(x, window.innerWidth - dragElement.offsetWidth)) + 'px';
+                dragElement.style.top = Math.max(0, Math.min(y, window.innerHeight - dragElement.offsetHeight)) + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', function() {
+            isDragging = false;
+            dragElement = null;
+        });
+
+        // Sorting Algorithms
+        function generateArray() {
+            sortingArray = [];
+            for (let i = 0; i < 30; i++) {
+                sortingArray.push(Math.floor(Math.random() * 200) + 10);
+            }
+            displayArray();
+        }
+
+        function displayArray() {
+            const container = document.getElementById('arrayContainer');
+            container.innerHTML = '';
+            sortingArray.forEach((value, index) => {
+                const bar = document.createElement('div');
+                bar.className = 'array-bar';
+                bar.style.height = value + 'px';
+                bar.id = `bar-${index}`;
+                container.appendChild(bar);
+            });
+        }
+
+        async function bubbleSort() {
+            if (isAnimating) return;
+            isAnimating = true;
+            document.getElementById('currentAlgo').textContent = 'Bubble Sort';
+            let comparisons = 0;
+
+            for (let i = 0; i < sortingArray.length - 1; i++) {
+                for (let j = 0; j < sortingArray.length - i - 1; j++) {
+                    comparisons++;
+                    document.getElementById('comparisons').textContent = comparisons;
+                    
+                    // Highlight comparing elements
+                    document.getElementById(`bar-${j}`).classList.add('comparing');
+                    document.getElementById(`bar-${j + 1}`).classList.add('comparing');
+                    
+                    await sleep(101 - document.getElementById('sortSpeed').value);
+                    
+                    if (sortingArray[j] > sortingArray[j + 1]) {
+                        // Swap
+                        [sortingArray[j], sortingArray[j + 1]] = [sortingArray[j + 1], sortingArray[j]];
+                        
+                        // Update visual
+                        const bar1 = document.getElementById(`bar-${j}`);
+                        const bar2 = document.getElementById(`bar-${j + 1}`);
+                        const temp = bar1.style.height;
+                        bar1.style.height = bar2.style.height;
+                        bar2.style.height = temp;
+                    }
+                    
+                    // Remove highlight
+                    document.getElementById(`bar-${j}`).classList.remove('comparing');
+                    document.getElementById(`bar-${j + 1}`).classList.remove('comparing');
+                }
+                // Mark as sorted
+                document.getElementById(`bar-${sortingArray.length - 1 - i}`).classList.add('sorted');
+            }
+            document.getElementById(`bar-0`).classList.add('sorted');
+            isAnimating = false;
+        }
+
+        async function quickSort() {
+            if (isAnimating) return;
+            isAnimating = true;
+            document.getElementById('currentAlgo').textContent = 'Quick Sort';
+            let comparisons = 0;
+
+            async function quickSortHelper(arr, low, high) {
+                if (low < high) {
+                    const pi = await partition(arr, low, high);
+                    await quickSortHelper(arr, low, pi - 1);
+                    await quickSortHelper(arr, pi + 1, high);
+                }
+            }
+
+            async function partition(arr, low, high) {
+                const pivot = arr[high];
+                let i = low - 1;
+
+                for (let j = low; j < high; j++) {
+                    comparisons++;
+                    document.getElementById('comparisons').textContent = comparisons;
+                    
+                    document.getElementById(`bar-${j}`).classList.add('comparing');
+                    await sleep(101 - document.getElementById('sortSpeed').value);
+                    
+                    if (arr[j] < pivot) {
+                        i++;
+                        [arr[i], arr[j]] = [arr[j], arr[i]];
+                        
+                        // Update visual
+                        const bar1 = document.getElementById(`bar-${i}`);
+                        const bar2 = document.getElementById(`bar-${j}`);
+                        const temp = bar1.style.height;
+                        bar1.style.height = bar2.style.height;
+                        bar2.style.height = temp;
+                    }
+                    
+                    document.getElementById(`bar-${j}`).classList.remove('comparing');
+                }
+
+                [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+                
+                // Update visual
+                const bar1 = document.getElementById(`bar-${i + 1}`);
+                const bar2 = document.getElementById(`bar-${high}`);
+                const temp = bar1.style.height;
+                bar1.style.height = bar2.style.height;
+                bar2.style.height = temp;
+
+                return i + 1;
+            }
+
+            await quickSortHelper(sortingArray, 0, sortingArray.length - 1);
+            
+            // Mark all as sorted
+            for (let i = 0; i < sortingArray.length; i++) {
+                document.getElementById(`bar-${i}`).classList.add('sorted');
+            }
+            
+            isAnimating = false;
+        }
+
+        async function mergeSort() {
+            if (isAnimating) return;
+            isAnimating = true;
+            document.getElementById('currentAlgo').textContent = 'Merge Sort';
+            let comparisons = 0;
+
+            async function mergeSortHelper(arr, left, right) {
+                if (left < right) {
+                    const mid = Math.floor((left + right) / 2);
+                    await mergeSortHelper(arr, left, mid);
+                    await mergeSortHelper(arr, mid + 1, right);
+                    await merge(arr, left, mid, right);
+                }
+            }
+
+            async function merge(arr, left, mid, right) {
+                const leftArr = arr.slice(left, mid + 1);
+                const rightArr = arr.slice(mid + 1, right + 1);
+                
+                let i = 0, j = 0, k = left;
+
+                while (i < leftArr.length && j < rightArr.length) {
+                    comparisons++;
+                    document.getElementById('comparisons').textContent = comparisons;
+                    
+                    document.getElementById(`bar-${k}`).classList.add('comparing');
+                    await sleep(101 - document.getElementById('sortSpeed').value);
+                    
+                    if (leftArr[i] <= rightArr[j]) {
+                        arr[k] = leftArr[i];
+                        document.getElementById(`bar-${k}`).style.height = leftArr[i] + 'px';
+                        i++;
+                    } else {
+                        arr[k] = rightArr[j];
+                        document.getElementById(`bar-${k}`).style.height = rightArr[j] + 'px';
+                        j++;
+                    }
+                    
+                    document.getElementById(`bar-${k}`).classList.remove('comparing');
+                    k++;
+                }
+
+                while (i < leftArr.length) {
+                    arr[k] = leftArr[i];
+                    document.getElementById(`bar-${k}`).style.height = leftArr[i] + 'px';
+                    i++;
+                    k++;
+                }
+
+                while (j < rightArr.length) {
+                    arr[k] = rightArr[j];
+                    document.getElementById(`bar-${k}`).style.height = rightArr[j] + 'px';
+                    j++;
+                    k++;
+                }
+            }
+
+            await mergeSortHelper(sortingArray, 0, sortingArray.length - 1);
+            
+            // Mark all as sorted
+            for (let i = 0; i < sortingArray.length; i++) {
+                document.getElementById(`bar-${i}`).classList.add('sorted');
+            }
+            
+            isAnimating = false;
+        }
+
+        // Pathfinding Algorithms
+        function initializePathfindingGrid() {
+            const grid = document.getElementById('pathfindingGrid');
+            pathfindingGrid = [];
+            grid.innerHTML = '';
+            
+            const rows = 20;
+            const cols = 30;
+            
+            for (let i = 0; i < rows; i++) {
+                pathfindingGrid[i] = [];
+                for (let j = 0; j < cols; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.id = `cell-${i}-${j}`;
+                    cell.onclick = () => toggleWall(i, j);
+                    grid.appendChild(cell);
+                    pathfindingGrid[i][j] = { row: i, col: j, isWall: false, isVisited: false, distance: Infinity, previous: null };
+                }
+                grid.appendChild(document.createElement('br'));
+            }
+            
+            // Set start and end points
+            pathfindingGrid[1][1].isStart = true;
+            pathfindingGrid[18][28].isEnd = true;
+            document.getElementById('cell-1-1').classList.add('start');
+            document.getElementById('cell-18-28').classList.add('end');
+        }
+
+        function toggleWall(row, col) {
+            if (pathfindingGrid[row][col].isStart || pathfindingGrid[row][col].isEnd) return;
+            
+            pathfindingGrid[row][col].isWall = !pathfindingGrid[row][col].isWall;
+            const cell = document.getElementById(`cell-${row}-${col}`);
+            if (pathfindingGrid[row][col].isWall) {
+                cell.classList.add('wall');
+            } else {
+                cell.classList.remove('wall');
+            }
+        }
+
+        function clearGrid() {
+            pathfindingGrid.forEach((row, i) => {
+                row.forEach((cell, j) => {
+                    if (!cell.isStart && !cell.isEnd) {
+                        cell.isWall = false;
+                        cell.isVisited = false;
+                        cell.distance = Infinity;
+                        cell.previous = null;
+                        const cellElement = document.getElementById(`cell-${i}-${j}`);
+                        cellElement.className = 'grid-cell';
+                    }
+                });
+            });
+            
+            // Reset start and end
+            document.getElementById('cell-1-1').classList.add('start');
+            document.getElementById('cell-18-28').classList.add('end');
+            document.getElementById('nodesVisited').textContent = '0';
+            document.getElementById('pathLength').textContent = '0';
+        }
+
+        async function dijkstraSearch() {
+            document.getElementById('pathAlgo').textContent = 'Dijkstra';
+            clearVisited();
+            
+            const startNode = pathfindingGrid[1][1];
+            const endNode = pathfindingGrid[18][28];
+            const unvisitedNodes = getAllNodes();
+            startNode.distance = 0;
+            
+            let visitedCount = 0;
+            
+            while (unvisitedNodes.length) {
+                sortNodesByDistance(unvisitedNodes);
+                const closestNode = unvisitedNodes.shift();
+                
+                if (closestNode.isWall) continue;
+                if (closestNode.distance === Infinity) break;
+                
+                closestNode.isVisited = true;
+                visitedCount++;
+                document.getElementById('nodesVisited').textContent = visitedCount;
+                
+                if (!closestNode.isStart && !closestNode.isEnd) {
+                    document.getElementById(`cell-${closestNode.row}-${closestNode.col}`).classList.add('visited');
+                    await sleep(10);
+                }
+                
+                if (closestNode === endNode) {
+                    const path = getPath(endNode);
+                    animatePath(path);
+                    document.getElementById('pathLength').textContent = path.length;
+                    return;
+                }
+                
+                updateUnvisitedNeighbors(closestNode);
+            }
+        }
+
+        async function aStarSearch() {
+            document.getElementById('pathAlgo').textContent = 'A* Search';
+            clearVisited();
+            
+            const startNode = pathfindingGrid[1][1];
+            const endNode = pathfindingGrid[18][28];
+            const openSet = [startNode];
+            const closedSet = [];
+            
+            startNode.gScore = 0;
+            startNode.fScore = heuristic(startNode, endNode);
+            
+            let visitedCount = 0;
+            
+            while (openSet.length > 0) {
+                let current = openSet[0];
+                for (let i = 1; i < openSet.length; i++) {
+                    if (openSet[i].fScore < current.fScore) {
+                        current = openSet[i];
+                    }
+                }
+                
+                openSet.splice(openSet.indexOf(current), 1);
+                closedSet.push(current);
+                
+                current.isVisited = true;
+                visitedCount++;
+                document.getElementById('nodesVisited').textContent = visitedCount;
+                
+                if (!current.isStart && !current.isEnd) {
+                    document.getElementById(`cell-${current.row}-${current.col}`).classList.add('visited');
+                    await sleep(10);
+                }
+                
+                if (current === endNode) {
+                    const path = getPath(endNode);
+                    animatePath(path);
+                    document.getElementById('pathLength').textContent = path.length;
+                    return;
+                }
+                
+                const neighbors = getNeighbors(current);
+                for (const neighbor of neighbors) {
+                    if (closedSet.includes(neighbor) || neighbor.isWall) continue;
+                    
+                    const tentativeGScore = current.gScore + 1;
+                    
+                    if (!openSet.includes(neighbor)) {
+                        openSet.push(neighbor);
+                    } else if (tentativeGScore >= neighbor.gScore) {
+                        continue;
+                    }
+                    
+                    neighbor.previous = current;
+                    neighbor.gScore = tentativeGScore;
+                    neighbor.fScore = neighbor.gScore + heuristic(neighbor, endNode);
+                }
+            }
+        }
+
+        function heuristic(nodeA, nodeB) {
+            return Math.abs(nodeA.row - nodeB.row) + Math.abs(nodeA.col - nodeB.col);
+        }
+
+        function clearVisited() {
+            pathfindingGrid.forEach(row => {
+                row.forEach(cell => {
+                    cell.isVisited = false;
+                    cell.distance = Infinity;
+                    cell.previous = null;
+                    cell.gScore = Infinity;
+                    cell.fScore = Infinity;
+                    if (!cell.isWall && !cell.isStart && !cell.isEnd) {
+                        document.getElementById(`cell-${cell.row}-${cell.col}`).className = 'grid-cell';
+                    }
+                });
+            });
+        }
+
+        function getAllNodes() {
+            const nodes = [];
+            pathfindingGrid.forEach(row => {
+                row.forEach(cell => nodes.push(cell));
+            });
+            return nodes;
+        }
+
+        function sortNodesByDistance(unvisitedNodes) {
+            unvisitedNodes.sort((nodeA, nodeB) => nodeA.distance - nodeB.distance);
+        }
+
+        function updateUnvisitedNeighbors(node) {
+            const unvisitedNeighbors = getUnvisitedNeighbors(node);
+            for (const neighbor of unvisitedNeighbors) {
+                neighbor.distance = node.distance + 1;
+                neighbor.previous = node;
+            }
+        }
+
+        function getUnvisitedNeighbors(node) {
+            const neighbors = [];
+            const { row, col } = node;
+            if (row > 0) neighbors.push(pathfindingGrid[row - 1][col]);
+            if (row < pathfindingGrid.length - 1) neighbors.push(pathfindingGrid[row + 1][col]);
+            if (col > 0) neighbors.push(pathfindingGrid[row][col - 1]);
+            if (col < pathfindingGrid[0].length - 1) neighbors.push(pathfindingGrid[row][col + 1]);
+            return neighbors.filter(neighbor => !neighbor.isVisited);
+        }
+
+        function getNeighbors(node) {
+            const neighbors = [];
+            const { row, col } = node;
+            if (row > 0) neighbors.push(pathfindingGrid[row - 1][col]);
+            if (row < pathfindingGrid.length - 1) neighbors.push(pathfindingGrid[row + 1][col]);
+            if (col > 0) neighbors.push(pathfindingGrid[row][col - 1]);
+            if (col < pathfindingGrid[0].length - 1) neighbors.push(pathfindingGrid[row][col + 1]);
+            return neighbors;
+        }
+
+        function getPath(finishNode) {
+            const path = [];
+            let currentNode = finishNode;
+            while (currentNode !== null) {
+                path.unshift(currentNode);
+                currentNode = currentNode.previous;
+            }
+            return path;
+        }
+
+        async function animatePath(path) {
+            for (let i = 0; i < path.length; i++) {
+                const node = path[i];
+                if (!node.isStart && !node.isEnd) {
+                    document.getElementById(`cell-${node.row}-${node.col}`).classList.add('path');
+                    await sleep(50);
+                }
+            }
+        }
+
+        async function breadthFirstSearch() {
+            document.getElementById('pathAlgo').textContent = 'Breadth-First Search';
+            clearVisited();
+            
+            const startNode = pathfindingGrid[1][1];
+            const endNode = pathfindingGrid[18][28];
+            const queue = [startNode];
+            startNode.isVisited = true;
+            
+            let visitedCount = 0;
+            
+            while (queue.length > 0) {
+                const currentNode = queue.shift();
+                visitedCount++;
+                document.getElementById('nodesVisited').textContent = visitedCount;
+                
+                if (!currentNode.isStart && !currentNode.isEnd) {
+                    document.getElementById(`cell-${currentNode.row}-${currentNode.col}`).classList.add('visited');
+                    await sleep(20);
+                }
+                
+                if (currentNode === endNode) {
+                    const path = getPath(endNode);
+                    animatePath(path);
+                    document.getElementById('pathLength').textContent = path.length;
+                    return;
+                }
+                
+                const neighbors = getUnvisitedNeighbors(currentNode);
+                for (const neighbor of neighbors) {
+                    if (!neighbor.isWall && !neighbor.isVisited) {
+                        neighbor.isVisited = true;
+                        neighbor.previous = currentNode;
+                        queue.push(neighbor);
+                    }
+                }
+            }
+        }
+
+        async function depthFirstSearch() {
+            document.getElementById('pathAlgo').textContent = 'Depth-First Search';
+            clearVisited();
+            
+            const startNode = pathfindingGrid[1][1];
+            const endNode = pathfindingGrid[18][28];
+            const stack = [startNode];
+            
+            let visitedCount = 0;
+            
+            while (stack.length > 0) {
+                const currentNode = stack.pop();
+                
+                if (currentNode.isVisited || currentNode.isWall) continue;
+                
+                currentNode.isVisited = true;
+                visitedCount++;
+                document.getElementById('nodesVisited').textContent = visitedCount;
+                
+                if (!currentNode.isStart && !currentNode.isEnd) {
+                    document.getElementById(`cell-${currentNode.row}-${currentNode.col}`).classList.add('visited');
+                    await sleep(20);
+                }
+                
+                if (currentNode === endNode) {
+                    const path = getPath(endNode);
+                    animatePath(path);
+                    document.getElementById('pathLength').textContent = path.length;
+                    return;
+                }
+                
+                const neighbors = getNeighbors(currentNode);
+                for (const neighbor of neighbors) {
+                    if (!neighbor.isVisited && !neighbor.isWall) {
+                        neighbor.previous = currentNode;
+                        stack.push(neighbor);
+                    }
+                }
+            }
+        }
+
+        // Tree Traversal
+        function generateTree() {
+            treeNodes = [];
+            const values = [50, 30, 70, 20, 40, 60, 80, 10, 25, 35, 45];
+            values.forEach(value => {
+                treeNodes.push({ value, left: null, right: null, element: null });
+            });
+            
+            // Build binary search tree
+            for (let i = 1; i < treeNodes.length; i++) {
+                insertNode(treeNodes[0], treeNodes[i]);
+            }
+            
+            displayTree();
+        }
+
+        function insertNode(root, newNode) {
+            if (newNode.value < root.value) {
+                if (root.left === null) {
+                    root.left = newNode;
+                } else {
+                    insertNode(root.left, newNode);
+                }
+            } else {
+                if (root.right === null) {
+                    root.right = newNode;
+                } else {
+                    insertNode(root.right, newNode);
+                }
+            }
+        }
+
+        function displayTree() {
+            const container = document.getElementById('treeContainer');
+            container.innerHTML = '';
+            
+            treeNodes.forEach((node, index) => {
+                const nodeElement = document.createElement('span');
+                nodeElement.className = 'tree-node';
+                nodeElement.textContent = node.value;
+                nodeElement.id = `tree-node-${node.value}`;
+                container.appendChild(nodeElement);
+                node.element = nodeElement;
+            });
+        }
+
+        async function preorderTraversal() {
+            const result = [];
+            await preorderHelper(treeNodes[0], result);
+            document.getElementById('traversalOrder').textContent = result.join(' → ');
+        }
+
+        async function preorderHelper(node, result) {
+            if (node === null) return;
+            
+            node.element.classList.add('visiting');
+            document.getElementById('currentNode').textContent = node.value;
+            result.push(node.value);
+            await sleep(500);
+            
+            node.element.classList.remove('visiting');
+            node.element.classList.add('visited');
+            
+            await preorderHelper(node.left, result);
+            await preorderHelper(node.right, result);
+        }
+
+        async function inorderTraversal() {
+            const result = [];
+            await inorderHelper(treeNodes[0], result);
+            document.getElementById('traversalOrder').textContent = result.join(' → ');
+        }
+
+        async function inorderHelper(node, result) {
+            if (node === null) return;
+            
+            await inorderHelper(node.left, result);
+            
+            node.element.classList.add('visiting');
+            document.getElementById('currentNode').textContent = node.value;
+            result.push(node.value);
+            await sleep(500);
+            
+            node.element.classList.remove('visiting');
+            node.element.classList.add('visited');
+            
+            await inorderHelper(node.right, result);
+        }
+
+        async function postorderTraversal() {
+            const result = [];
+            await postorderHelper(treeNodes[0], result);
+            document.getElementById('traversalOrder').textContent = result.join(' → ');
+        }
+
+        async function postorderHelper(node, result) {
+            if (node === null) return;
+            
+            await postorderHelper(node.left, result);
+            await postorderHelper(node.right, result);
+            
+            node.element.classList.add('visiting');
+            document.getElementById('currentNode').textContent = node.value;
+            result.push(node.value);
+            await sleep(500);
+            
+            node.element.classList.remove('visiting');
+            node.element.classList.add('visited');
+        }
+
+        async function levelOrderTraversal() {
+            const result = [];
+            const queue = [treeNodes[0]];
+            
+            while (queue.length > 0) {
+                const node = queue.shift();
+                
+                node.element.classList.add('visiting');
+                document.getElementById('currentNode').textContent = node.value;
+                result.push(node.value);
+                await sleep(500);
+                
+                node.element.classList.remove('visiting');
+                node.element.classList.add('visited');
+                
+                if (node.left) queue.push(node.left);
+                if (node.right) queue.push(node.right);
+            }
+            
+            document.getElementById('traversalOrder').textContent = result.join(' → ');
+        }
+
+        // Graph Algorithms
+        function generateGraph() {
+            const canvas = document.getElementById('graphCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            graphNodes = [
+                { id: 'A', x: 100, y: 100, visited: false },
+                { id: 'B', x: 250, y: 80, visited: false },
+                { id: 'C', x: 400, y: 120, visited: false },
+                { id: 'D', x: 150, y: 200, visited: false },
+                { id: 'E', x: 350, y: 220, visited: false },
+                { id: 'F', x: 500, y: 180, visited: false }
+            ];
+            
+            graphEdges = [
+                { from: 'A', to: 'B', weight: 4 },
+                { from: 'A', to: 'D', weight: 2 },
+                { from: 'B', to: 'C', weight: 3 },
+                { from: 'B', to: 'E', weight: 6 },
+                { from: 'C', to: 'F', weight: 2 },
+                { from: 'D', to: 'E', weight: 4 },
+                { from: 'E', to: 'F', weight: 1 }
+            ];
+            
+            drawGraph();
+        }
+
+        function drawGraph() {
+            const canvas = document.getElementById('graphCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw edges
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 2;
+            graphEdges.forEach(edge => {
+                const fromNode = graphNodes.find(n => n.id === edge.from);
+                const toNode = graphNodes.find(n => n.id === edge.to);
+                
+                ctx.beginPath();
+                ctx.moveTo(fromNode.x, fromNode.y);
+                ctx.lineTo(toNode.x, toNode.y);
+                ctx.stroke();
+                
+                // Draw weight
+                const midX = (fromNode.x + toNode.x) / 2;
+                const midY = (fromNode.y + toNode.y) / 2;
+                ctx.fillStyle = '#ef4444';
+                ctx.font = '12px Inter';
+                ctx.fillText(edge.weight, midX, midY);
+            });
+            
+            // Draw nodes
+            graphNodes.forEach(node => {
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, 25, 0, 2 * Math.PI);
+                ctx.fillStyle = node.visited ? '#10b981' : '#3b82f6';
+                ctx.fill();
+                ctx.strokeStyle = '#1f2937';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = 'white';
+                ctx.font = '16px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText(node.id, node.x, node.y + 5);
+            });
+        }
+
+        async function dfsGraph() {
+            document.getElementById('graphAlgo').textContent = 'Depth-First Search';
+            resetGraphVisited();
+            
+            const visited = [];
+            const stack = [graphNodes[0]];
+            
+            while (stack.length > 0) {
+                const current = stack.pop();
+                
+                if (current.visited) continue;
+                
+                current.visited = true;
+                visited.push(current.id);
+                document.getElementById('graphVisited').textContent = visited.join(' → ');
+                
+                drawGraph();
+                await sleep(800);
+                
+                // Add neighbors to stack
+                const neighbors = getGraphNeighbors(current.id);
+                neighbors.reverse().forEach(neighbor => {
+                    if (!neighbor.visited) {
+                        stack.push(neighbor);
+                    }
+                });
+            }
+        }
+
+        async function bfsGraph() {
+            document.getElementById('graphAlgo').textContent = 'Breadth-First Search';
+            resetGraphVisited();
+            
+            const visited = [];
+            const queue = [graphNodes[0]];
+            graphNodes[0].visited = true;
+            
+            while (queue.length > 0) {
+                const current = queue.shift();
+                visited.push(current.id);
+                document.getElementById('graphVisited').textContent = visited.join(' → ');
+                
+                drawGraph();
+                await sleep(800);
+                
+                // Add neighbors to queue
+                const neighbors = getGraphNeighbors(current.id);
+                neighbors.forEach(neighbor => {
+                    if (!neighbor.visited) {
+                        neighbor.visited = true;
+                        queue.push(neighbor);
+                    }
+                });
+            }
+        }
+
+        function getGraphNeighbors(nodeId) {
+            const neighbors = [];
+            graphEdges.forEach(edge => {
+                if (edge.from === nodeId) {
+                    neighbors.push(graphNodes.find(n => n.id === edge.to));
+                }
+                if (edge.to === nodeId) {
+                    neighbors.push(graphNodes.find(n => n.id === edge.from));
+                }
+            });
+            return neighbors;
+        }
+
+        function resetGraphVisited() {
+            graphNodes.forEach(node => node.visited = false);
+            document.getElementById('graphVisited').textContent = '';
+            drawGraph();
+        }
+
+        // Search Algorithms
+        function generateSearchArray() {
+            const searchArray = [];
+            for (let i = 1; i <= 20; i++) {
+                searchArray.push(i * 5);
+            }
+            displaySearchArray(searchArray);
+        }
+
+        function displaySearchArray(array) {
+            const container = document.getElementById('searchArray');
+            container.innerHTML = '';
+            array.forEach((value, index) => {
+                const element = document.createElement('span');
+                element.className = 'inline-block bg-blue-500 text-white px-3 py-2 m-1 rounded';
+                element.textContent = value;
+                element.id = `search-${index}`;
+                container.appendChild(element);
+            });
+        }
+
+        async function linearSearch() {
+            const target = parseInt(document.getElementById('searchTarget').value);
+            if (isNaN(target)) return;
+            
+            document.getElementById('searchTargetDisplay').textContent = target;
+            document.getElementById('searchSteps').textContent = '0';
+            document.getElementById('searchResult').textContent = 'Searching...';
+            
+            const array = [];
+            for (let i = 1; i <= 20; i++) {
+                array.push(i * 5);
+            }
+            
+            let steps = 0;
+            for (let i = 0; i < array.length; i++) {
+                steps++;
+                document.getElementById('searchSteps').textContent = steps;
+                
+                // Highlight current element
+                document.getElementById(`search-${i}`).style.backgroundColor = '#ef4444';
+                await sleep(300);
+                
+                if (array[i] === target) {
+                    document.getElementById('searchResult').textContent = `Found at index ${i}`;
+                    document.getElementById(`search-${i}`).style.backgroundColor = '#10b981';
+                    return;
+                }
+                
+                document.getElementById(`search-${i}`).style.backgroundColor = '#6b7280';
+            }
+            
+            document.getElementById('searchResult').textContent = 'Not found';
+        }
+
+        async function binarySearch() {
+            const target = parseInt(document.getElementById('searchTarget').value);
+            if (isNaN(target)) return;
+            
+            document.getElementById('searchTargetDisplay').textContent = target;
+            document.getElementById('searchSteps').textContent = '0';
+            document.getElementById('searchResult').textContent = 'Searching...';
+            
+            const array = [];
+            for (let i = 1; i <= 20; i++) {
+                array.push(i * 5);
+            }
+            
+            let left = 0;
+            let right = array.length - 1;
+            let steps = 0;
+            
+            while (left <= right) {
+                steps++;
+                document.getElementById('searchSteps').textContent = steps;
+                
+                const mid = Math.floor((left + right) / 2);
+                
+                // Highlight search range
+                for (let i = left; i <= right; i++) {
+                    document.getElementById(`search-${i}`).style.backgroundColor = '#fbbf24';
+                }
+                
+                // Highlight middle element
+                document.getElementById(`search-${mid}`).style.backgroundColor = '#ef4444';
+                await sleep(800);
+                
+                if (array[mid] === target) {
+                    document.getElementById('searchResult').textContent = `Found at index ${mid}`;
+                    document.getElementById(`search-${mid}`).style.backgroundColor = '#10b981';
+                    return;
+                }
+                
+                // Reset colors
+                for (let i = left; i <= right; i++) {
+                    document.getElementById(`search-${i}`).style.backgroundColor = '#3b82f6';
+                }
+                
+                if (array[mid] < target) {
+                    // Eliminate left half
+                    for (let i = left; i <= mid; i++) {
+                        document.getElementById(`search-${i}`).style.backgroundColor = '#6b7280';
+                    }
+                    left = mid + 1;
+                } else {
+                    // Eliminate right half
+                    for (let i = mid; i <= right; i++) {
+                        document.getElementById(`search-${i}`).style.backgroundColor = '#6b7280';
+                    }
+                    right = mid - 1;
+                }
+                
+                await sleep(500);
+            }
+            
+            document.getElementById('searchResult').textContent = 'Not found';
+        }
+
+        // Calculator
+        function appendToCalc(value) {
+            document.getElementById('calcDisplay').value += value;
+        }
+
+        function clearCalc() {
+            document.getElementById('calcDisplay').value = '';
+        }
+
+        function calculateResult() {
+            try {
+                const result = eval(document.getElementById('calcDisplay').value.replace('×', '*').replace('÷', '/'));
+                document.getElementById('calcDisplay').value = result;
+            } catch (error) {
+                document.getElementById('calcDisplay').value = 'Error';
+            }
+        }
+
+        // Terminal
+        function handleTerminalInput(event) {
+            if (event.key === 'Enter') {
+                const command = event.target.value;
+                executeCommand(command);
+                event.target.value = '';
+            }
+        }
+
+        function executeCommand(command) {
+            const terminal = document.getElementById('terminalContent');
+            const commandLine = document.createElement('div');
+            commandLine.innerHTML = `<span class="text-blue-400">user@algoos:~$ </span>${command}`;
+            
+            const output = document.createElement('div');
+            output.className = 'text-green-400 mb-2';
+            
+            switch (command.toLowerCase()) {
+                case 'help':
+                    output.innerHTML = `Available commands:<br>
+                    help - Show this help message<br>
+                    ls - List algorithms<br>
+                    run [algorithm] - Run an algorithm<br>
+                    clear - Clear terminal<br>
+                    time - Show current time<br>
+                    info - Show system information`;
+                    break;
+                case 'ls':
+                    output.innerHTML = `Available algorithms:<br>
+                    bubble_sort    quicksort      merge_sort<br>
+                    dijkstra       a_star         dfs<br>
+                    bfs            binary_search  linear_search`;
+                    break;
+                case 'clear':
+                    terminal.innerHTML = `<div>AlgoOS Terminal v1.0</div>
+                    <div>Type 'help' for available commands</div>`;
+                    return;
+                case 'time':
+                    output.textContent = new Date().toLocaleString();
+                    break;
+                case 'info':
+                    output.innerHTML = `AlgoOS v1.0<br>
+                    Kernel: Algorithm Visualizer Core<br>
+                    Memory: ∞ GB available<br>
+                    CPU: Quantum Algorithm Processor`;
+                    break;
+                default:
+                    if (command.startsWith('run ')) {
+                        const algo = command.substring(4);
+                        output.textContent = `Running ${algo}... Check the respective visualizer window.`;
+                    } else {
+                        output.textContent = `Command not found: ${command}. Type 'help' for available commands.`;
+                    }
+            }
+            
+            terminal.insertBefore(commandLine, terminal.lastElementChild);
+            terminal.insertBefore(output, terminal.lastElementChild);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // File Manager
+        function openAlgorithmFile(filename) {
+            const content = {
+                'bubble_sort.js': `// Bubble Sort Algorithm
+function bubbleSort(arr) {
+    for (let i = 0; i < arr.length - 1; i++) {
+        for (let j = 0; j < arr.length - i - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+            }
+        }
+    }
+    return arr;
+}`,
+                'quicksort.js': `// Quick Sort Algorithm
+function quickSort(arr, low = 0, high = arr.length - 1) {
+    if (low < high) {
+        const pi = partition(arr, low, high);
+        quickSort(arr, low, pi - 1);
+        quickSort(arr, pi + 1, high);
+    }
+    return arr;
+}
+
+function partition(arr, low, high) {
+    const pivot = arr[high];
+    let i = low - 1;
+    
+    for (let j = low; j < high; j++) {
+        if (arr[j] < pivot) {
+            i++;
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+    }
+    
+    [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+    return i + 1;
+}`,
+                'dijkstra.js': `// Dijkstra's Algorithm
+function dijkstra(graph, start) {
+    const distances = {};
+    const visited = new Set();
+    const previous = {};
+    
+    // Initialize distances
+    for (let vertex in graph) {
+        distances[vertex] = Infinity;
+        previous[vertex] = null;
+    }
+    distances[start] = 0;
+    
+    while (visited.size < Object.keys(graph).length) {
+        const current = getMinDistanceVertex(distances, visited);
+        visited.add(current);
+        
+        for (let neighbor in graph[current]) {
+            const distance = distances[current] + graph[current][neighbor];
+            if (distance < distances[neighbor]) {
+                distances[neighbor] = distance;
+                previous[neighbor] = current;
+            }
+        }
+    }
+    
+    return { distances, previous };
+}`,
+                'binary_tree.js': `// Binary Tree Implementation
+class TreeNode {
+    constructor(value) {
+        this.value = value;
+        this.left = null;
+        this.right = null;
+    }
+}
+
+class BinaryTree {
+    constructor() {
+        this.root = null;
+    }
+    
+    insert(value) {
+        if (!this.root) {
+            this.root = new TreeNode(value);
+        } else {
+            this.insertNode(this.root, value);
+        }
+    }
+    
+    insertNode(node, value) {
+        if (value < node.value) {
+            if (!node.left) {
+                node.left = new TreeNode(value);
+            } else {
+                this.insertNode(node.left, value);
+            }
+        } else {
+            if (!node.right) {
+                node.right = new TreeNode(value);
+            } else {
+                this.insertNode(node.right, value);
+            }
+        }
+    }
+}`
+            };
+            
+            alert(`File: ${filename}\n\n${content[filename] || 'File content not available'}`);
+        }
+
+        // Utility function
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Initialize the operating system
+        document.addEventListener('DOMContentLoaded', initializeOS);
+    </script>
+</body>
+</html>
